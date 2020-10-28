@@ -1,0 +1,9 @@
+{
+  "domain": "resrobot",
+  "name": "resrobot",
+  "documentation": "",
+  "dependencies": [],
+  "after_dependencies": ["http", "rest"],
+  "codeowners": ["@iesus"],
+  "requirements": []
+}

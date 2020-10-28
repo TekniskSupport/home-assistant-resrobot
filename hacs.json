@@ -1,0 +1,6 @@
+{
+  "name": "ResRobot",
+  "country": "SE",
+  "domains": ["sensor"],
+  "homeassistant": "0.116.4"
+}
