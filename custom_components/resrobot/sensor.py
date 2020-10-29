@@ -19,77 +19,85 @@ from dateutil import parser
 from datetime import datetime
 
 _LOGGER = logging.getLogger(__name__)
-_ENDPOINT = 'https://api.resrobot.se/v2/departureBoard?id=740051093&maxJourneys=5&format=json'
+_ENDPOINT = 'https://api.resrobot.se/v2/departureBoard?format=json'
 
-DEFAULT_NAME       = 'ResRobot'
-DEFAULT_INTERVAL   = 5
-DEFAULT_VERIFY_SSL = True
-CONF_DEPARTURES    = 'departures'
-CONF_MAX_JOURNEYS  = 'max_journeys'
-CONF_STOP_ID       = 'stop_id'
-CONF_KEY           = 'key'
+DEFAULT_NAME          = 'ResRobot'
+DEFAULT_INTERVAL      = 10
+DEFAULT_VERIFY_SSL    = True
+CONF_DEPARTURES       = 'departures'
+CONF_MAX_JOURNEYS     = 'max_journeys'
+CONF_SENSORS          = 'sensors'
+CONF_STOP_ID          = 'stop_id'
+CONF_KEY              = 'key'
+CONF_FILTER           = 'filter'
+CONF_FILTER_LINE      = 'line'
+CONF_FILTER_DIRECTION = 'direction'
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_KEY, default=0): cv.string,
-    vol.Optional(CONF_DEPARTURES): [{
-        vol.Required(CONF_STOP_ID): cv.string,
-        vol.Optional(CONF_MAX_JOURNEYS, default=5): cv.string,
-        vol.Optional(CONF_NAME): cv.string}],
+    vol.Required(CONF_DEPARTURES): [{
+        vol.Optional(CONF_SENSORS, default=3): cv.positive_int,
+        vol.Required(CONF_STOP_ID): cv.positive_int,
+        vol.Optional(CONF_NAME): cv.string,
+        vol.Optional(CONF_MAX_JOURNEYS, default=20): cv.positive_int,
+        vol.Optional(CONF_FILTER, default=[]): [{
+            vol.Required(CONF_FILTER_LINE): cv.string,
+            vol.Optional(CONF_FILTER_DIRECTION): cv.string,
+        }],
+    }],
 })
-
 SCAN_INTERVAL = timedelta(minutes=DEFAULT_INTERVAL)
 
-def setup_platform(hass, config, add_devices, discovery_info=None):
+async def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
     sensors    = []
     depatures  = config.get(CONF_DEPARTURES)
+    api_key    = config.get(CONF_KEY)
 
     for departure in config.get(CONF_DEPARTURES):
-        add_sensors(
+        await add_sensors(
             hass,
             config,
-            add_devices,
+            async_add_devices,
+            api_key,
+            departure.get(CONF_SENSORS),
             departure.get(CONF_NAME),
             departure.get(CONF_STOP_ID),
+            departure.get(CONF_MAX_JOURNEYS),
+            departure.get(CONF_FILTER),
             discovery_info
         )
 
-def add_sensors(hass, config, add_devices, name, location, discovery_info=None):
+async def add_sensors(hass, config, async_add_devices, api_key, number_of_sensors, name, location, max_journeys, filter, discovery_info=None):
     method     = 'GET'
     payload    = ''
-    auth       = ''
+    auth       = None
     verify_ssl = DEFAULT_VERIFY_SSL
     headers    = {}
-    endpoint   = _ENDPOINT + location
-    rest = RestData(method, endpoint, auth, headers, payload, verify_ssl)
-    rest.update()
+    timeout    = 5000
+    endpoint   = _ENDPOINT + '&key='+ api_key + '&id=' + str(location) + '&maxJourneys='+ str(max_journeys)
 
-    if rest.data is None:
-        _LOGGER.error("Unable to fetch data from Trafiklab")
-        return False
+    rest = RestData(method, endpoint, auth, headers, payload, verify_ssl, timeout)
 
-    restData = json.loads(rest.data)
+    #Set up empty sensors
     sensors = []
+    for i in range(0, number_of_sensors):
+        entityName = name + '_' + str(i)
+        transportInformation = {}
+        sensors.append(entityRepresentation(rest, entityName, i, filter, transportInformation))
+    async_add_devices(sensors, True)
 
-    for data in restData['Departure']:
-        transportInformation = {
-            name:      data['name'],
-            direction: data['direction'],
-            time:      data['time'],
-            date:      data['date'],
-        }
-        sensors.append(entityRepresentation(rest, name, location, transportInformation))
-    add_devices(sensors, True)
-
-# pylint: disable=no-member
 class entityRepresentation(Entity):
     """Representation of a sensor."""
 
-    def __init__(self, rest, prefix, location, data):
+    def __init__(self, rest, name, k, filter, data):
         """Initialize a sensor."""
         self._rest       = rest
-        self._prefix     = prefix
-        self._location   = location
+        self._name       = name
+        self._k          = k
+        self._filter     = filter
         self._data       = data
+        self._unit       = "time"
+        self._state      = "Unavailable"
         self._attributes = {}
 
     @property
@@ -120,28 +128,55 @@ class entityRepresentation(Entity):
     def icon(self):
         return 'mdi:bus'
 
-    def update(self):
+    def filterResults(self, trips):
+        deleteItems = []
+        allowedLines = []
+        for filter in self._filter:
+            allowedLines.append(int(filter["line"]))
+        for k,trip in enumerate(trips):
+            del trips[k]["Product"]
+            del trips[k]["Stops"]
+            for f in self._filter:
+                if "line" in f and (int(trip["transportNumber"]) not in allowedLines):
+                    deleteItems.append(trip)
+                if "direction" in f and trip["transportNumber"] == f["line"]:
+                    if trip["direction"].lower() != f["direction"].lower():
+                        deleteItems.append(trip)
+        for d in deleteItems:
+            if d and d in trips:
+                trips.remove(d)
+
+        return trips
+
+    async def async_update(self):
         """Get the latest data from the API and updates the state."""
         try:
             getAttributes = [
-                "name",
+                "type",
+                "stop",
                 "direction",
                 "time",
-                "date",
+                "date"
             ]
+            await self._rest.async_update()
+            self._result = json.loads(self._rest.data)
+            trips = self.filterResults(self._result['Departure'])
+            _LOGGER.error('Bussresor efter filtrering: '+ str(len(trips)))
 
-            self._rest.update()
-            self._result                   = json.loads(self._rest.data)
-            self._name                     = self._prefix + '_' + self._location + '_' + self._data['name']
-            for data in self._result['GetSingleStationResult']['Samples']:
-                if self._name == self._prefix + '_' + self._location + '_' + data['Name']:
-                    self._unit    = 'hours'
-                    self._state   = data['time']
-                    # self._attributes.update({"last_modified": data['Updated']})
+            if (not trips or trips is None):
+                _LOGGER.error("ResRobot found no trips")
+                return False
+
+            for k,data in enumerate(trips):
+                if (k == self._k):
+                    self._attributes.update({"name": data["name"]})
+                    self._attributes.update({"line": data["transportNumber"]})
+                    self._attributes.update({"timeDate": data["date"] +" "+ data["time"]})
+                    self._state = data['time']
                     for attribute in data:
                         if attribute in getAttributes and data[attribute]:
                             self._attributes.update({attribute: data[attribute]})
         except TypeError as e:
             self._result = None
             _LOGGER.error(
-                "Unable to fetch data from trafiklab. " + str(e))
+                "Unable to fetch data from Trafiklab. " + str(e))
