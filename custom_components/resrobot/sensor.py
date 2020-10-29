@@ -161,7 +161,6 @@ class entityRepresentation(Entity):
             await self._rest.async_update()
             self._result = json.loads(self._rest.data)
             trips = self.filterResults(self._result['Departure'])
-            _LOGGER.error('Bussresor efter filtrering: '+ str(len(trips)))
 
             if (not trips or trips is None):
                 _LOGGER.error("ResRobot found no trips")
