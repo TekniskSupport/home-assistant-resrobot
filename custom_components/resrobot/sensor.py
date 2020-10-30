@@ -132,12 +132,12 @@ class entityRepresentation(Entity):
         deleteItems = []
         allowedLines = []
         for filter in self._filter:
-            allowedLines.append(int(filter["line"]))
+            allowedLines.append(str(filter["line"]))
         for k,trip in enumerate(trips):
             del trips[k]["Product"]
             del trips[k]["Stops"]
             for f in self._filter:
-                if "line" in f and (int(trip["transportNumber"]) not in allowedLines):
+                if "line" in f and (str(trip["transportNumber"]) not in allowedLines):
                     deleteItems.append(trip)
                 if "direction" in f and trip["transportNumber"] == f["line"]:
                     if trip["direction"].lower() != f["direction"].lower():
