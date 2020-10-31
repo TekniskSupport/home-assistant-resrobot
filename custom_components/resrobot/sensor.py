@@ -35,6 +35,7 @@ CONF_FILTER           = 'filter'
 CONF_FILTER_LINE      = 'line'
 CONF_FILTER_DIRECTION = 'direction'
 CONF_FETCH_INTERVAL   = 'fetch_interval'
+CONF_UNIT             = 'unit'
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_KEY, default=0): cv.string,
@@ -43,6 +44,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
         vol.Optional(CONF_SENSORS, default=3): cv.positive_int,
         vol.Required(CONF_STOP_ID): cv.positive_int,
         vol.Optional(CONF_NAME): cv.string,
+        vol.Optional(CONF_UNIT): cv.string,
         vol.Optional(CONF_MAX_JOURNEYS, default=20): cv.positive_int,
         vol.Optional(CONF_FILTER, default=[]): [{
             vol.Required(CONF_FILTER_LINE): cv.string,
@@ -66,6 +68,7 @@ async def async_setup_platform(hass, config, async_add_devices, discovery_info=N
             api_key,
             fetch_interval,
             departure.get(CONF_SENSORS),
+            departure.get(CONF_UNIT),
             departure.get(CONF_NAME),
             departure.get(CONF_STOP_ID),
             departure.get(CONF_MAX_JOURNEYS),
@@ -73,7 +76,7 @@ async def async_setup_platform(hass, config, async_add_devices, discovery_info=N
             discovery_info
         )
 
-async def add_sensors(hass, config, async_add_devices, api_key, fetch_interval, number_of_sensors, name, location, max_journeys, filter, discovery_info=None):
+async def add_sensors(hass, config, async_add_devices, api_key, fetch_interval, number_of_sensors, unit_of_measurement, name, location, max_journeys, filter, discovery_info=None):
     method         = 'GET'
     payload        = ''
     auth           = None
@@ -91,7 +94,7 @@ async def add_sensors(hass, config, async_add_devices, api_key, fetch_interval, 
 
     for i in range(0, number_of_sensors):
         entityName = name + '_' + str(i)
-        sensors.append(entityRepresentation(hass, helper, entityName, i, number_of_sensors))
+        sensors.append(entityRepresentation(hass, helper, entityName, i, number_of_sensors, unit_of_measurement))
     async_add_devices(sensors, True)
 
 class helperEntity(Entity):
@@ -177,14 +180,17 @@ class helperEntity(Entity):
 class entityRepresentation(Entity):
     """Representation of a sensor."""
 
-    def __init__(self, hass, helper, name, k, number_of_sensors):
+    def __init__(self, hass, helper, name, k, number_of_sensors, unit_of_measurement):
+
+        _LOGGER.error(unit_of_measurement)
+
         """Initialize a sensor."""
         self._hass       = hass
         self._helper     = helper
         self._name       = name
         self._k          = k
         self._s          = number_of_sensors
-        self._unit       = "time"
+        self._unit       = unit_of_measurement if unit_of_measurement else "time"
         self._state      = "Unavailable"
         self._attributes = {}
 

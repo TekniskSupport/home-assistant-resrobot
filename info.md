@@ -26,6 +26,7 @@ You can also filter the results and adjust how many sensors you want:
   max_journeys: 20                # Number of departures to fetch
   sensors: 5                      # Number of sensors to create
   fetch_interval: 10              # Minutes between updating the data
+  unit: "🕑"                      # unit_of_measurement
   filter:
   - line: 999
     direction: city
