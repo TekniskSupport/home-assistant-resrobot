@@ -26,6 +26,7 @@ You can also filter the results and adjust how many sensors you want:
   max_journeys: 20                # Number of departures to fetch
   sensors: 5                      # Number of sensors to create
   fetch_interval: 10              # Minutes between updating the data
+  time_offset: 10                 # Do not fetch from NOW but now+n minutes, also consider the departed n minutes before it actually departs, e.g. time it takes you to walk to the bus)
   unit: "🕑"                      # unit_of_measurement
   filter:
   - line: 999

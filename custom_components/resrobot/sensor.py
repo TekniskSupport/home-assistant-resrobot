@@ -8,6 +8,7 @@ import json
 from collections import namedtuple
 from datetime import datetime,timedelta
 import slugify as unicode_slug
+import dateparser
 
 import voluptuous as vol
 
@@ -36,6 +37,7 @@ CONF_FILTER_LINE      = 'line'
 CONF_FILTER_DIRECTION = 'direction'
 CONF_FETCH_INTERVAL   = 'fetch_interval'
 CONF_UNIT             = 'unit'
+CONF_TIME_OFFSET      = 'time_offset'
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_KEY, default=0): cv.string,
@@ -45,6 +47,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
         vol.Required(CONF_STOP_ID): cv.positive_int,
         vol.Optional(CONF_NAME): cv.string,
         vol.Optional(CONF_UNIT): cv.string,
+        vol.Optional(CONF_TIME_OFFSET): cv.positive_int,
         vol.Optional(CONF_MAX_JOURNEYS, default=20): cv.positive_int,
         vol.Optional(CONF_FILTER, default=[]): [{
             vol.Required(CONF_FILTER_LINE): cv.string,
@@ -72,41 +75,53 @@ async def async_setup_platform(hass, config, async_add_devices, discovery_info=N
             departure.get(CONF_NAME),
             departure.get(CONF_STOP_ID),
             departure.get(CONF_MAX_JOURNEYS),
+            departure.get(CONF_TIME_OFFSET),
             departure.get(CONF_FILTER),
             discovery_info
         )
 
-async def add_sensors(hass, config, async_add_devices, api_key, fetch_interval, number_of_sensors, unit_of_measurement, name, location, max_journeys, filter, discovery_info=None):
+async def add_sensors(hass, config, async_add_devices, api_key, fetch_interval,
+                      number_of_sensors, unit_of_measurement, name, location,
+                      max_journeys, time_offset, filter, discovery_info=None):
     method         = 'GET'
     payload        = ''
     auth           = None
     verify_ssl     = DEFAULT_VERIFY_SSL
     headers        = {}
     timeout        = 5000
-    endpoint       = _ENDPOINT + '&key='+ api_key + '&id=' + str(location) + '&maxJourneys='+ str(max_journeys)
-    rest           = RestData(method, endpoint, auth, headers, payload, verify_ssl, timeout)
+    time           = None
+    resource       = _ENDPOINT + '&key='+ api_key + '&id=' + str(location) + '&maxJourneys='+ str(max_journeys)
     sensors        = []
     helpers        = []
     helper         = 'helper_'+name
-
-    helpers.append(helperEntity(rest, helper, fetch_interval, filter))
+    base_resource  = resource
+    if time_offset:
+        time     = dateparser.parse("in " + str(time_offset) + " minutes")
+        resource = resource + '&time='+ time.strftime("%H:%M") + '&date=' + time.strftime('%Y-%m-%d')
+    rest           = RestData(method, resource, auth, headers, payload, verify_ssl, timeout)
+    helpers.append(helperEntity(rest, helper, fetch_interval, time_offset, base_resource, filter))
     async_add_devices(helpers, True)
 
     for i in range(0, number_of_sensors):
         entityName = name + '_' + str(i)
-        sensors.append(entityRepresentation(hass, helper, entityName, i, number_of_sensors, unit_of_measurement))
+        sensors.append(entityRepresentation(hass, helper, entityName, i,
+                                            number_of_sensors,
+                                            unit_of_measurement,
+                                            time_offset))
     async_add_devices(sensors, True)
 
 class helperEntity(Entity):
-    def __init__(self, rest, name, fetch_interval, filter):
+    def __init__(self, rest, name, fetch_interval, time_offset, base_resource, filter):
         """Initialize a sensor."""
-        self._rest       = rest
-        self._name       = name
-        self._filter     = filter
-        self._unit       = "json"
-        self._state      = datetime.now()
-        self._interval   = int(fetch_interval)
-        self._attributes = {}
+        self._rest        = rest
+        self._name        = name
+        self._filter      = filter
+        self._unit        = "json"
+        self._state       = datetime.now()
+        self._interval    = int(fetch_interval)
+        self._time_offset = time_offset
+        self._base_url    = base_resource
+        self._attributes  = {}
 
     @property
     def name(self):
@@ -162,12 +177,18 @@ class helperEntity(Entity):
         try:
             fetch_in_seconds = self._interval*60
             if "json" not in self._attributes or self._state.timestamp()+fetch_in_seconds < datetime.now().timestamp():
+
+                if self._time_offset:
+                    time = dateparser.parse("in " + str(self._time_offset) + " minutes")
+                    url  = self._base_url + '&time='+ time.strftime("%H:%M") + '&date=' + time.strftime('%Y-%m-%d')
+                    self._rest.set_url(url)
+
                 await self._rest.async_update()
                 self._result = json.loads(self._rest.data)
+
                 if "Departure" not in self._result:
                     _LOGGER.error("ResRobot found no trips")
                     return False
-                _LOGGER.error("UPDATED DATA")
                 trips = self.filterResults(self._result['Departure'])
                 self._state = datetime.now()
                 self._attributes.update({"json": trips})
@@ -180,19 +201,20 @@ class helperEntity(Entity):
 class entityRepresentation(Entity):
     """Representation of a sensor."""
 
-    def __init__(self, hass, helper, name, k, number_of_sensors, unit_of_measurement):
-
-        _LOGGER.error(unit_of_measurement)
+    def __init__(self, hass, helper, name, k,
+                 number_of_sensors, unit_of_measurement,
+                 time_offset):
 
         """Initialize a sensor."""
-        self._hass       = hass
-        self._helper     = helper
-        self._name       = name
-        self._k          = k
-        self._s          = number_of_sensors
-        self._unit       = unit_of_measurement if unit_of_measurement else "time"
-        self._state      = "Unavailable"
-        self._attributes = {}
+        self._hass        = hass
+        self._helper      = helper
+        self._name        = name
+        self._k           = k
+        self._s           = number_of_sensors
+        self._unit        = unit_of_measurement if unit_of_measurement else "time"
+        self._time_offset = time_offset
+        self._state       = "Unavailable"
+        self._attributes  = {}
 
     def nameToEntityId(self, text: str, *, separator: str = "_") -> str:
         text = text.lower()
@@ -226,12 +248,12 @@ class entityRepresentation(Entity):
     def icon(self):
         return 'mdi:bus'
 
-    def filterDeparted(self, trips):
+    def filterDeparted(self, trips, time_offset=0):
         for trip in trips:
             removeTrip   = []
             removedTrips = 0
             timeDate     = datetime.strptime(trip["date"]+' '+trip["time"], '%Y-%m-%d %H:%M:%S')
-            if timeDate.timestamp() < datetime.now().timestamp():
+            if timeDate.timestamp()+(time_offset*60) < datetime.now().timestamp():
                 removeTrip.append(trip)
             for t in removeTrip:
                 trips.remove(t)
@@ -256,11 +278,15 @@ class entityRepresentation(Entity):
             if entity_state is not None:
                 trips = entity_state.attributes.get('json')
 
-            if len(trips) > 0:
-                trips = self.filterDeparted(trips)
-            if len(trips) < 1 or trips is None:
+            if trips is not None and len(trips) > 0:
+                trips = self.filterDeparted(trips, self._time_offset)
+            if trips is None or len(trips) < 1:
                 _LOGGER.error("ResRobot found no trips")
                 return False
+
+            self._state = "Unavailable"
+            for t in getAttributes:
+                self._attributes.update({t: ""})
 
             for k,data in enumerate(trips):
                 if (k == self._k):
