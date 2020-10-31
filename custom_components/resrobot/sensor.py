@@ -253,8 +253,11 @@ class entityRepresentation(Entity):
             removeTrip   = []
             removedTrips = 0
             timeDate     = datetime.strptime(trip["date"]+' '+trip["time"], '%Y-%m-%d %H:%M:%S')
-            if timeDate.timestamp()+(time_offset*60) < datetime.now().timestamp():
+            if timeDate.timestamp() < datetime.now().timestamp():
                 removeTrip.append(trip)
+            if time_offset:
+                if timeDate.timestamp()+(time_offset*60) < datetime.now().timestamp():
+                    removeTrip.append(trip)
             for t in removeTrip:
                 trips.remove(t)
 
