@@ -158,6 +158,7 @@ class helperEntity(Entity):
         for filter in self._filter:
             allowedLines.append(str(filter["line"]))
         for k,trip in enumerate(trips):
+            trips[k]["means_of_transport"] = trip["Product"]["catCode"]
             del trips[k]["Product"]
             del trips[k]["Stops"]
             for f in self._filter:
@@ -246,6 +247,23 @@ class entityRepresentation(Entity):
 
     @property
     def icon(self):
+        if 'means_of_transport' in self._attributes:
+            t = self._attributes['means_of_transport']
+            _LOGGER.error(t)
+            if t in [1,2,4]:
+                return "mdi:train"
+            elif t in [3, 7]:
+                return "mdi:bus"
+            elif t in [8, 9]:
+                return "mdi:ferry"
+            elif t in [5]:
+                return "mdi:subway"
+            elif t in [6]:
+                return "mdi:tram"
+            elif t in [8]:
+                return "mdi:ferry"
+            elif t in [9]:
+                return "mdi:taxi"
         return 'mdi:bus'
 
     def filterDeparted(self, trips, time_offset=0):
@@ -271,7 +289,8 @@ class entityRepresentation(Entity):
                 "stop",
                 "direction",
                 "time",
-                "date"
+                "date",
+                "means_of_transport",
             ]
 
             trips        = []
