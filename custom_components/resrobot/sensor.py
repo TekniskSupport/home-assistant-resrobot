@@ -265,7 +265,7 @@ class entityRepresentation(Entity):
 
     @property
     def icon(self):
-        if 'means_of_transport' in self._attributes and self._attributes["means_of_transport"] != "":
+        if 'means_of_transport' in self._attributes and self._attributes["means_of_transport"] is not None:
             t = int(self._attributes['means_of_transport'])
             if   t in [1, 2, 4]:
                 return "mdi:train"
@@ -323,7 +323,7 @@ class entityRepresentation(Entity):
 
             self._state = "Unavailable"
             for t in getAttributes:
-                self._attributes.update({t: ""})
+                self._attributes.update({t: None})
 
             for k,data in enumerate(trips):
                 if (k == self._k):
