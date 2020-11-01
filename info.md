@@ -63,10 +63,10 @@ Filter types are applied to direction only
   filter:
     - line: 5                   # Always filter out all lines
       type: "must"              # Exact match
-      direction: "station"      # word station must be in the direction, on line 5
+      direction: "station"      # station must be exact match of direction, on line 5
     - line: 5                   # Always filter on lines
       type: "must_not"          # must not match
-      direction: "mölndal"      # word mölndal cannot be in the direction, on line 5
+      direction: "mölndal"      # mölndal cannot be an exact match for direction, on line 5
     - line: 6                   # Add line 6 to allowed number
       type: "contains"          # loose match on name
       direction: "kortedala"    # matches if the name kortedala is in the destination
