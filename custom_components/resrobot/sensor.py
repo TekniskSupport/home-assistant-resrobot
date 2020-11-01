@@ -34,6 +34,7 @@ CONF_STOP_ID          = 'stop_id'
 CONF_KEY              = 'key'
 CONF_FILTER           = 'filter'
 CONF_FILTER_LINE      = 'line'
+CONF_FILTER_TYPE      = 'type'
 CONF_FILTER_DIRECTION = 'direction'
 CONF_FETCH_INTERVAL   = 'fetch_interval'
 CONF_UNIT             = 'unit'
@@ -51,6 +52,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
         vol.Optional(CONF_MAX_JOURNEYS, default=20): cv.positive_int,
         vol.Optional(CONF_FILTER, default=[]): [{
             vol.Required(CONF_FILTER_LINE): cv.string,
+            vol.Optional(CONF_FILTER_TYPE, default="must"): cv.string,
             vol.Optional(CONF_FILTER_DIRECTION): cv.string,
         }],
     }],
@@ -165,10 +167,19 @@ class helperEntity(Entity):
                 if "line" in f and (str(trip["transportNumber"]) not in allowedLines):
                     deleteItems.append(trip)
                 if "direction" in f and trip["transportNumber"] == f["line"]:
-                    if trip["direction"].lower() == f["direction"].lower():
-                        trips[k]["do_not_delete"] = True
-                    else:
-                        deleteItems.append(trip)
+                    if  f["type"] == "must":
+                        if trip["direction"].lower() == f["direction"].lower():
+                            trips[k]["do_not_delete"] = True
+                        else:
+                            deleteItems.append(trip)
+                    elif f["type"] == "must_not":
+                        if trip["direction"].lower() != f["direction"].lower():
+                            deleteItems.append(trip)
+                    elif f["type"] == "contains":
+                        if f["direction"].lower() in trip["direction"].lower():
+                            trips[k]["do_not_delete"] = True
+                        else:
+                            deleteItems.append(trip)
         for d in deleteItems:
             if d and d in trips:
                 if "do_not_delete" not in d:
@@ -254,9 +265,9 @@ class entityRepresentation(Entity):
 
     @property
     def icon(self):
-        if 'means_of_transport' in self._attributes:
+        if 'means_of_transport' in self._attributes and self._attributes["means_of_transport"] != "":
             t = int(self._attributes['means_of_transport'])
-            if t in [1,2,4]:
+            if   t in [1, 2, 4]:
                 return "mdi:train"
             elif t in [3, 7]:
                 return "mdi:bus"

@@ -57,4 +57,19 @@ I have a bus that only departs every so often:
     direction: Operan
 ```
 
+Filter types are applied to direction only
+ default type is must
+```yaml
+  filter:
+    - line: 5                   # Always filter out all lines
+      type: "must"              # Exact match
+      direction: "station"      # word station must be in the direction, on line 5
+    - line: 5                   # Always filter on lines
+      type: "must_not"          # must not match
+      direction: "mölndal"      # word mölndal cannot be in the direction, on line 5
+    - line: 6                   # Add line 6 to allowed number
+      type: "contains"          # loose match on name
+      direction: "kortedala"    # matches if the name kortedala is in the destination
+```
+
 Replace stop_id with number from [stops.txt](https://raw.githubusercontent.com/TekniskSupport/home-assistant-resrobot/master/stops.txt)
