@@ -29,26 +29,27 @@ A simple setup that creates a few sensors and displays next departures:
 - platform: resrobot
   key: YOUR-KEY
   departures:
-    - stop_id: STOP_ID
-      name: Next bus departures
+  - stop_id: STOP_ID
+    name: Next bus departures
 ```
 
 You can also filter the results and adjust how many sensors you want:
 ```yaml
-- stop_id: STOP_ID              # Look in the stops.txt file
-  name: Next bus towards the city # Name of sensor
-  max_journeys: 20                # Number of departures to fetch
-  sensors: 5                      # Number of sensors to create
-  fetch_interval: 10              # Minutes between updating the data
-  time_offset: 10                 # Do not fetch from NOW but now+n minutes, also consider the departed n minutes before it actually departs, e.g. time it takes you to walk to the bus)
-  unit: "🕑"                      # unit_of_measurement
-  filter:
-  - line: 999
-    direction: city
-  - line: 991
-    direction: other end station
-  - line: 990
-    direction: yet another
+- platform: ResRobot
+  fetch_interval: 10                # Minutes between updating the data
+  - stop_id: STOP_ID                # Look in the stops.txt file
+    name: Next bus towards the city # Name of sensor
+    max_journeys: 20                # Number of departures to fetch
+    sensors: 5                      # Number of sensors to create
+    time_offset: 10                 # Do not fetch from NOW but now+n minutes, also consider the departed n minutes before it actually departs, e.g. time it takes you to walk to the bus)
+    unit: "🕑"                      # unit_of_measurement
+    filter:
+    - line: 999
+      direction: city
+    - line: 991
+      direction: other end station
+    - line: 990
+      direction: yet another
 ```
 
 I have a bus that only departs every so often:
@@ -67,16 +68,16 @@ Filter types are applied to direction only
  default type is must
 ```yaml
   filter:
-    - line: 50                  # I want all directions of bus no. 50
-    - line: 5                   # Always filter out all lines defined
-      type: "must"              # Exact match
-      direction: "station"      # station must be exact match of direction, on line 5
-    - line: 5                   # Always filter on lines
-      type: "must_not"          # must not match
-      direction: "mölndal"      # mölndal cannot be an exact match for direction, on line 5
-    - line: 6                   # Add line 6 to allowed number
-      type: "contains"          # loose match on name
-      direction: "kortedala"    # matches if the name kortedala is in the destination
+  - line: 50                  # I want all directions of bus no. 50
+  - line: 5                   # Always filter out all lines defined
+    type: "must"              # Exact match
+    direction: "station"      # station must be exact match of direction, on line 5
+  - line: 5                   # Always filter on lines
+    type: "must_not"          # must not match
+    direction: "mölndal"      # mölndal cannot be an exact match for direction, on line 5
+  - line: 6                   # Add line 6 to allowed number
+    type: "contains"          # loose match on name
+    direction: "kortedala"    # matches if the name kortedala is in the destination
 ```
 
 The filter means_of_transport works like line, it also get added to an allow list everything not defined in allow is being filtered out. line, means_of_transport and direction can be combined
@@ -86,10 +87,10 @@ The filter means_of_transport works like line, it also get added to an allow lis
   name: saltholmen
   max_journeys: 100
   filter:
-    - means_of_transport: 8
-      direction: Vrångö
-      type: contains
-      line: 281
+  - means_of_transport: 8
+    direction: Vrångö
+    type: contains
+    line: 281
 ```
 This effectively filters out all but ferries to somewhere containing the word "Vrångö" if the line id is 281.
 
@@ -99,9 +100,9 @@ This example:
   name: saltholmen
   max_journeys: 100
   filter:
-    - means_of_transport: 8
-    - line: 281
-    - line: 283
+  - means_of_transport: 8
+  - line: 281
+  - line: 283
 ```
 Will filter out anything that is not a ferry and has line number 281 or 283
 
