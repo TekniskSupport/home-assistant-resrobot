@@ -173,6 +173,10 @@ class helperEntity(Entity):
             if d and d in trips:
                 if "do_not_delete" not in d:
                     trips.remove(d)
+        #clean up
+        for k,trip in enumerate(trips):
+            if "do_not_delete" in trip:
+                del trips[k]["do_not_delete"]
 
         return trips
 
