@@ -24,21 +24,22 @@ from datetime import datetime
 _LOGGER = logging.getLogger(__name__)
 _ENDPOINT = 'https://api.resrobot.se/v2/departureBoard?format=json'
 
-DEFAULT_NAME          = 'ResRobot'
-DEFAULT_INTERVAL      = 1
-DEFAULT_VERIFY_SSL    = True
-CONF_DEPARTURES       = 'departures'
-CONF_MAX_JOURNEYS     = 'max_journeys'
-CONF_SENSORS          = 'sensors'
-CONF_STOP_ID          = 'stop_id'
-CONF_KEY              = 'key'
-CONF_FILTER           = 'filter'
-CONF_FILTER_LINE      = 'line'
-CONF_FILTER_TYPE      = 'type'
-CONF_FILTER_DIRECTION = 'direction'
-CONF_FETCH_INTERVAL   = 'fetch_interval'
-CONF_UNIT             = 'unit'
-CONF_TIME_OFFSET      = 'time_offset'
+DEFAULT_NAME            = 'ResRobot'
+DEFAULT_INTERVAL        = 1
+DEFAULT_VERIFY_SSL      = True
+CONF_DEPARTURES         = 'departures'
+CONF_MAX_JOURNEYS       = 'max_journeys'
+CONF_SENSORS            = 'sensors'
+CONF_STOP_ID            = 'stop_id'
+CONF_KEY                = 'key'
+CONF_FILTER             = 'filter'
+CONF_FILTER_LINE        = 'line'
+CONF_FILTER_TYPE        = 'type'
+CONF_FILTER_DIRECTION   = 'direction'
+CONF_FETCH_INTERVAL     = 'fetch_interval'
+CONF_UNIT               = 'unit'
+CONF_TIME_OFFSET        = 'time_offset'
+CONF_MEANS_OF_TRANSPORT = 'means_of_transport'
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_KEY, default=0): cv.string,
@@ -51,7 +52,8 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
         vol.Optional(CONF_TIME_OFFSET): cv.positive_int,
         vol.Optional(CONF_MAX_JOURNEYS, default=20): cv.positive_int,
         vol.Optional(CONF_FILTER, default=[]): [{
-            vol.Required(CONF_FILTER_LINE): cv.string,
+            vol.Optional(CONF_MEANS_OF_TRANSPORT): cv.string,
+            vol.Optional(CONF_FILTER_LINE): cv.string,
             vol.Optional(CONF_FILTER_TYPE, default="must"): cv.string,
             vol.Optional(CONF_FILTER_DIRECTION): cv.string,
         }],
@@ -154,19 +156,26 @@ class helperEntity(Entity):
         return 'mdi:code-json'
 
     def filterResults(self, trips):
-        deleteItems  = []
-        allowedLines = []
+        deleteItems             = []
+        allowedLines            = []
+        allowedMeansOfTransport = []
 
         for filter in self._filter:
-            allowedLines.append(str(filter["line"]))
+            if "line" in filter:
+                allowedLines.append(str(filter["line"]))
+        for filter in self._filter:
+            if "means_of_transport" in filter:
+                allowedMeansOfTransport.append(str(filter["means_of_transport"]))
         for k,trip in enumerate(trips):
             trips[k]["means_of_transport"] = trip["Product"]["catCode"]
             del trips[k]["Product"]
             del trips[k]["Stops"]
             for f in self._filter:
-                if "line" in f and (str(trip["transportNumber"]) not in allowedLines):
+                if "line" in f and str(trip["transportNumber"]) not in allowedLines and allowedLines != []:
                     deleteItems.append(trip)
-                if "direction" in f and trip["transportNumber"] == f["line"]:
+                if "means_of_transport" in f and str(trip["means_of_transport"]) not in allowedMeansOfTransport and allowedMeansOfTransport != []:
+                    deleteItems.append(trip)
+                if "direction" in f and (("line" in f and trip["transportNumber"] == f["line"]) or ("means_of_transport" in f and trip["means_of_transport"] == f["means_of_transport"])):
                     if  f["type"] == "must":
                         if trip["direction"].lower() == f["direction"].lower():
                             trips[k]["do_not_delete"] = True
