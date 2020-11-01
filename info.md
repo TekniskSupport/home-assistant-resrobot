@@ -3,6 +3,7 @@
 
 - HACS -> integrations -> [...] -> custom repositories
 - TekniskSupport/home-assistant-resrobot
+- Integration
 - Save
 - Install ResRobot
 - Add configuration
