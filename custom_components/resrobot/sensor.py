@@ -248,13 +248,11 @@ class entityRepresentation(Entity):
     @property
     def icon(self):
         if 'means_of_transport' in self._attributes:
-            t = self._attributes['means_of_transport']
+            t = int(self._attributes['means_of_transport'])
             if t in [1,2,4]:
                 return "mdi:train"
             elif t in [3, 7]:
                 return "mdi:bus"
-            elif t in [8, 9]:
-                return "mdi:ferry"
             elif t in [5]:
                 return "mdi:subway"
             elif t in [6]:
