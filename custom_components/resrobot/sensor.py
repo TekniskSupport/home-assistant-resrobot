@@ -249,7 +249,6 @@ class entityRepresentation(Entity):
     def icon(self):
         if 'means_of_transport' in self._attributes:
             t = self._attributes['means_of_transport']
-            _LOGGER.error(t)
             if t in [1,2,4]:
                 return "mdi:train"
             elif t in [3, 7]:
