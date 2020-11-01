@@ -61,6 +61,7 @@ Filter types are applied to direction only
  default type is must
 ```yaml
   filter:
+    - line: 50                  # I want all directions of bus no. 50
     - line: 5                   # Always filter out all lines
       type: "must"              # Exact match
       direction: "station"      # station must be exact match of direction, on line 5
