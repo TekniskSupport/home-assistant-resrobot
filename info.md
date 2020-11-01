@@ -1,6 +1,13 @@
 # ResRobot integration
 ## Installation/Configuration:
 
+- HACS -> integrations -> [...] -> custom repositories
+- TekniskSupport/home-assistant-resrobot
+- Save
+- Install ResRobot
+- Add configuration
+- Restart home assistant
+
 ### To get your api_key:
 - register for an account, and
 - create a project at https://www.trafiklab.se/node/add/project
