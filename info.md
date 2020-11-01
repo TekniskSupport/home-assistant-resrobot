@@ -1,6 +1,8 @@
 # ResRobot integration
 ## Installation/Configuration:
 
+First off, this integration is compatible with version 0.117.0 and above (to date).
+
 - HACS -> integrations -> [...] -> custom repositories
 - TekniskSupport/home-assistant-resrobot
 - Integration
