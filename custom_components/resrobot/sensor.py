@@ -165,11 +165,14 @@ class helperEntity(Entity):
                 if "line" in f and (str(trip["transportNumber"]) not in allowedLines):
                     deleteItems.append(trip)
                 if "direction" in f and trip["transportNumber"] == f["line"]:
-                    if trip["direction"].lower() != f["direction"].lower():
+                    if trip["direction"].lower() == f["direction"].lower():
+                        trips[k]["do_not_delete"] = True
+                    else:
                         deleteItems.append(trip)
         for d in deleteItems:
             if d and d in trips:
-                trips.remove(d)
+                if "do_not_delete" not in d:
+                    trips.remove(d)
 
         return trips
 
