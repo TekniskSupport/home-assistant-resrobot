@@ -336,6 +336,7 @@ class entityRepresentation(Entity):
 
             for k,data in enumerate(trips):
                 if (k == self._k):
+                    self._name = data["name"]
                     self._attributes.update({"name": data["name"]})
                     self._attributes.update({"line": data["transportNumber"]})
                     if "rTime" in data:
