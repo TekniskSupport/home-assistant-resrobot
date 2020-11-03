@@ -31,6 +31,7 @@ CONF_DEPARTURES         = 'departures'
 CONF_MAX_JOURNEYS       = 'max_journeys'
 CONF_SENSORS            = 'sensors'
 CONF_STOP_ID            = 'stop_id'
+CONF_UPDATE_NAME        = 'update_name'
 CONF_KEY                = 'key'
 CONF_FILTER             = 'filter'
 CONF_FILTER_LINE        = 'line'
@@ -48,6 +49,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
         vol.Optional(CONF_SENSORS, default=3): cv.positive_int,
         vol.Required(CONF_STOP_ID): cv.positive_int,
         vol.Optional(CONF_NAME): cv.string,
+        vol.Optional(CONF_UPDATE_NAME): cv.boolean,
         vol.Optional(CONF_UNIT): cv.string,
         vol.Optional(CONF_TIME_OFFSET): cv.positive_int,
         vol.Optional(CONF_MAX_JOURNEYS, default=20): cv.positive_int,
@@ -77,6 +79,7 @@ async def async_setup_platform(hass, config, async_add_devices, discovery_info=N
             departure.get(CONF_SENSORS),
             departure.get(CONF_UNIT),
             departure.get(CONF_NAME),
+            departure.get(CONF_UPDATE_NAME),
             departure.get(CONF_STOP_ID),
             departure.get(CONF_MAX_JOURNEYS),
             departure.get(CONF_TIME_OFFSET),
@@ -85,8 +88,9 @@ async def async_setup_platform(hass, config, async_add_devices, discovery_info=N
         )
 
 async def add_sensors(hass, config, async_add_devices, api_key, fetch_interval,
-                      number_of_sensors, unit_of_measurement, name, location,
-                      max_journeys, time_offset, filter, discovery_info=None):
+                      number_of_sensors, unit_of_measurement, name, update_name,
+                      location, max_journeys, time_offset, filter,
+                      discovery_info=None):
     method         = 'GET'
     payload        = ''
     auth           = None
@@ -111,6 +115,7 @@ async def add_sensors(hass, config, async_add_devices, api_key, fetch_interval,
         sensors.append(entityRepresentation(hass, helper, entityName, i,
                                             number_of_sensors,
                                             unit_of_measurement,
+                                            update_name,
                                             time_offset))
     async_add_devices(sensors, True)
 
@@ -231,7 +236,7 @@ class entityRepresentation(Entity):
 
     def __init__(self, hass, helper, name, k,
                  number_of_sensors, unit_of_measurement,
-                 time_offset):
+                 update_name, time_offset):
 
         """Initialize a sensor."""
         self._hass        = hass
@@ -241,6 +246,7 @@ class entityRepresentation(Entity):
         self._s           = number_of_sensors
         self._unit        = unit_of_measurement if unit_of_measurement else "time"
         self._time_offset = time_offset
+        self._update_name = update_name
         self._state       = "Unavailable"
         self._attributes  = {}
 
@@ -336,7 +342,8 @@ class entityRepresentation(Entity):
 
             for k,data in enumerate(trips):
                 if (k == self._k):
-                    self._name = data["name"]
+                    if self._update_name:
+                        self._name = data["name"]
                     self._attributes.update({"name": data["name"]})
                     self._attributes.update({"line": data["transportNumber"]})
                     if "rTime" in data:
