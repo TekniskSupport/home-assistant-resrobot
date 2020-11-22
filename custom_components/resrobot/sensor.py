@@ -65,11 +65,11 @@ SCAN_INTERVAL = timedelta(minutes=DEFAULT_INTERVAL)
 
 async def async_setup_platform(hass, config, async_add_devices, discovery_info=None):
     sensors        = []
-    depatures      = config.get(CONF_DEPARTURES)
+    departures     = config.get(CONF_DEPARTURES)
     api_key        = config.get(CONF_KEY)
     fetch_interval = config.get(CONF_FETCH_INTERVAL) if config.get(CONF_FETCH_INTERVAL) else 10
 
-    for departure in config.get(CONF_DEPARTURES):
+    for departure in departures:
         await add_sensors(
             hass,
             config,
