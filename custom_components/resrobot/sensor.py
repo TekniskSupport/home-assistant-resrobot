@@ -107,7 +107,7 @@ async def add_sensors(hass, config, async_add_devices, api_key, fetch_interval,
     if time_offset:
         time     = dateparser.parse("in " + str(time_offset) + " minutes")
         resource = resource + '&time='+ time.strftime("%H:%M") + '&date=' + time.strftime('%Y-%m-%d')
-    rest           = RestData(method, resource, auth, headers, payload, params, verify_ssl, timeout)
+    rest           = RestData(hass, method, resource, auth, headers, params, payload, verify_ssl, timeout)
     helpers.append(helperEntity(rest, helper, fetch_interval, time_offset, base_resource, filter))
     async_add_devices(helpers, True)
 
