@@ -334,7 +334,6 @@ class entityRepresentation(Entity):
             if trips is not None and len(trips) > 0:
                 trips = self.filterDeparted(trips, self._time_offset)
             if trips is None or len(trips) < 1:
-                _LOGGER.error("ResRobot found no trips")
                 return False
 
             self._state = "Unavailable"
