@@ -6,4 +6,5 @@
   "requirements": [],
   "issue_tracker": "https://github.com/TekniskSupport/home-assistant-resrobot/issues", 
   "documentation": "https://github.com/TekniskSupport/home-assistant-resrobot/blob/master/info.md"
+  "version": "v0.0.8"
 }
