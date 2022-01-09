@@ -41,6 +41,7 @@ CONF_FETCH_INTERVAL     = 'fetch_interval'
 CONF_UNIT               = 'unit'
 CONF_TIME_OFFSET        = 'time_offset'
 CONF_MEANS_OF_TRANSPORT = 'means_of_transport'
+CONF_TIME_FORMAT        = 'time_format'
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_KEY, default=0): cv.string,
@@ -59,6 +60,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
             vol.Optional(CONF_FILTER_TYPE, default="must"): cv.string,
             vol.Optional(CONF_FILTER_DIRECTION): cv.string,
         }],
+        vol.Optional(CONF_TIME_FORMAT, default="%H:%M:%S"): cv.string,
     }],
 })
 SCAN_INTERVAL = timedelta(minutes=DEFAULT_INTERVAL)
@@ -84,12 +86,13 @@ async def async_setup_platform(hass, config, async_add_devices, discovery_info=N
             departure.get(CONF_MAX_JOURNEYS),
             departure.get(CONF_TIME_OFFSET),
             departure.get(CONF_FILTER),
+            departure.get(CONF_TIME_FORMAT),
             discovery_info
         )
 
 async def add_sensors(hass, config, async_add_devices, api_key, fetch_interval,
                       number_of_sensors, unit_of_measurement, name, update_name,
-                      location, max_journeys, time_offset, filter,
+                      location, max_journeys, time_offset, filter, time_format,
                       discovery_info=None):
     method         = 'GET'
     payload        = ''
@@ -117,7 +120,8 @@ async def add_sensors(hass, config, async_add_devices, api_key, fetch_interval,
                                             number_of_sensors,
                                             unit_of_measurement,
                                             update_name,
-                                            time_offset))
+                                            time_offset,
+                                            time_format))
     async_add_devices(sensors, True)
 
 class helperEntity(Entity):
@@ -237,7 +241,7 @@ class entityRepresentation(Entity):
 
     def __init__(self, hass, helper, name, k,
                  number_of_sensors, unit_of_measurement,
-                 update_name, time_offset):
+                 update_name, time_offset, time_format):
 
         """Initialize a sensor."""
         self._hass        = hass
@@ -250,6 +254,7 @@ class entityRepresentation(Entity):
         self._update_name = update_name
         self._state       = "Unavailable"
         self._attributes  = {}
+        self._time_format = time_format
 
     def nameToEntityId(self, text: str, *, separator: str = "_") -> str:
         text = text.lower()
@@ -344,14 +349,15 @@ class entityRepresentation(Entity):
                 if (k == self._k):
                     if self._update_name:
                         self._name = data["name"]
+                    if "rTime" in data:
+                        date_time = data["date"] +" "+ data["rTime"]
+                    else:
+                        date_time = data["date"] +" "+ data["time"]
                     self._attributes.update({"name": data["name"]})
                     self._attributes.update({"line": data["transportNumber"]})
-                    if "rTime" in data:
-                        self._attributes.update({"timeDate": data["date"] +" "+ data["rTime"]})
-                        self._state = data['rTime']
-                    else:
-                        self._attributes.update({"timeDate": data["date"] +" "+ data["time"]})
-                        self._state = data['time']
+                    self._attributes.update({"timeDate": date_time})
+                    date_time = datetime.strptime(date_time, '%Y-%m-%d %H:%M:%S')
+                    self._state = date_time.strftime(self._time_format)
                     for attribute in data:
                         if attribute in getAttributes and data[attribute]:
                             self._attributes.update({attribute: data[attribute]})
