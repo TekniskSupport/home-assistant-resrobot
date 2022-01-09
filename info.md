@@ -44,6 +44,7 @@ You can also filter the results and adjust how many sensors you want:
     sensors: 5                      # Number of sensors to create
     time_offset: 10                 # Do not fetch from NOW but now+n minutes, also consider the departed n minutes before it actually departs, e.g. time it takes you to walk to the bus)
     unit: "🕑"                      # unit_of_measurement
+    time_format: "%H:%M"            # format time as HH:MM
     filter:
     - line: 999
       direction: city
