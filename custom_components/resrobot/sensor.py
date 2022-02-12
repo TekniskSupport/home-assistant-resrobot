@@ -22,7 +22,7 @@ from dateutil import parser
 from datetime import datetime
 
 _LOGGER = logging.getLogger(__name__)
-_ENDPOINT = 'https://api.resrobot.se/v2/departureBoard?format=json'
+_ENDPOINT = 'https://api.resrobot.se/v2.1/departureBoard?format=json'
 
 DEFAULT_NAME            = 'ResRobot'
 DEFAULT_INTERVAL        = 1
@@ -102,7 +102,7 @@ async def add_sensors(hass, config, async_add_devices, api_key, fetch_interval,
     params         = {}
     timeout        = 5000
     time           = None
-    resource       = _ENDPOINT + '&key='+ api_key + '&id=' + str(location) + '&maxJourneys='+ str(max_journeys)
+    resource       = _ENDPOINT + '&accessId='+ api_key + '&id=' + str(location) + '&maxJourneys='+ str(max_journeys)
     sensors        = []
     helpers        = []
     helper         = 'helper_'+name
@@ -177,15 +177,15 @@ class helperEntity(Entity):
             if "means_of_transport" in filter:
                 allowedMeansOfTransport.append(str(filter["means_of_transport"]))
         for k,trip in enumerate(trips):
-            trips[k]["means_of_transport"] = trip["Product"]["catCode"]
+            trips[k]["means_of_transport"] = trip["Product"][0]["catCode"]
+            trips[k]["num"] = trip["Product"][0]["num"]
             del trips[k]["Product"]
-            del trips[k]["Stops"]
             for f in self._filter:
-                if "line" in f and str(trip["transportNumber"]) not in allowedLines and allowedLines != []:
+                if "line" in f and "num" in trip and str(trip["num"]) not in allowedLines and allowedLines != []:
                     deleteItems.append(trip)
                 if "means_of_transport" in f and str(trip["means_of_transport"]) not in allowedMeansOfTransport and allowedMeansOfTransport != []:
                     deleteItems.append(trip)
-                if "direction" in f and (("line" in f and trip["transportNumber"] == f["line"]) or ("means_of_transport" in f and trip["means_of_transport"] == f["means_of_transport"])):
+                if "direction" in f and (("line" in f and "num" in trip and trip["num"] == f["line"]) or ("means_of_transport" in f and trip["means_of_transport"] == f["means_of_transport"])):
                     if  f["type"] == "must":
                         if trip["direction"].lower() == f["direction"].lower():
                             trips[k]["do_not_delete"] = True
@@ -215,7 +215,6 @@ class helperEntity(Entity):
         try:
             fetch_in_seconds = self._interval*60
             if "json" not in self._attributes or self._state.timestamp()+fetch_in_seconds < datetime.now().timestamp():
-
                 if self._time_offset:
                     time = dateparser.parse("in " + str(self._time_offset) + " minutes")
                     url  = self._base_url + '&time='+ time.strftime("%H:%M") + '&date=' + time.strftime('%Y-%m-%d')
@@ -354,7 +353,7 @@ class entityRepresentation(Entity):
                     else:
                         date_time = data["date"] +" "+ data["time"]
                     self._attributes.update({"name": data["name"]})
-                    self._attributes.update({"line": data["transportNumber"]})
+                    self._attributes.update({"line": data["num"]})
                     self._attributes.update({"timeDate": date_time})
                     date_time = datetime.strptime(date_time, '%Y-%m-%d %H:%M:%S')
                     self._state = date_time.strftime(self._time_format)
