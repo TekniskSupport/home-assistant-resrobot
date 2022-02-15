@@ -102,11 +102,12 @@ async def add_sensors(hass, config, async_add_devices, api_key, fetch_interval,
     params         = {}
     timeout        = 5000
     time           = None
-    resource       = _ENDPOINT + '&accessId='+ api_key + '&id=' + str(location) + '&maxJourneys='+ str(max_journeys)
+    resource       = _ENDPOINT + '&accessId='+ api_key + '&id=' + str(location) + '&maxJourneys='+ str(max_journeys) + '&duration=90'
     sensors        = []
     helpers        = []
     helper         = 'helper_'+name
     base_resource  = resource
+
     if time_offset:
         time     = dateparser.parse("in " + str(time_offset) + " minutes")
         resource = resource + '&time='+ time.strftime("%H:%M") + '&date=' + time.strftime('%Y-%m-%d')
@@ -180,6 +181,9 @@ class helperEntity(Entity):
             trips[k]["means_of_transport"] = trip["Product"][0]["catCode"]
             trips[k]["num"] = trip["Product"][0]["num"]
             del trips[k]["Product"]
+            del trips[k]["JourneyDetailRef"]
+            del trips[k]["JourneyStatus"]
+            del trips[k]["ProductAtStop"]
             for f in self._filter:
                 if "line" in f and "num" in trip and str(trip["num"]) not in allowedLines and allowedLines != []:
                     deleteItems.append(trip)
