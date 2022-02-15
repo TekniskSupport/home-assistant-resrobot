@@ -60,6 +60,7 @@ I have a bus that only departs every so often:
 - stop_id: 740000000              # Look in the stops.txt file
   name: next commute bus to city  # Name of sensor
   max_journeys: 200               # Higher number as there are quite a few busses that departs in between this one
+                                  # The above is deprecated, will be replaced with duration; disregarded for now and hard-coded into the next 8 hours worth of trips 
   sensors: 1                      # Number of sensors to create
   filter:
   - line: 001
