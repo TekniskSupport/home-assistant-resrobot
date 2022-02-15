@@ -102,7 +102,7 @@ async def add_sensors(hass, config, async_add_devices, api_key, fetch_interval,
     params         = {}
     timeout        = 5000
     time           = None
-    resource       = _ENDPOINT + '&accessId='+ api_key + '&id=' + str(location) + '&maxJourneys='+ str(max_journeys) + '&duration=90'
+    resource       = _ENDPOINT + '&accessId='+ api_key + '&id=' + str(location) + '&maxJourneys='+ str(max_journeys) + '&duration=480'
     sensors        = []
     helpers        = []
     helper         = 'helper_'+name
