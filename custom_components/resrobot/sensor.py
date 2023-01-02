@@ -352,8 +352,8 @@ class entityRepresentation(Entity):
                 if (k == self._k):
                     if self._update_name:
                         self._name = data["name"]
-                    if "rTime" in data:
-                        date_time = data["date"] +" "+ data["rTime"]
+                    if "rtTime" in data:
+                        date_time = data["date"] +" "+ data["rtTime"]
                     else:
                         date_time = data["date"] +" "+ data["time"]
                     self._attributes.update({"name": data["name"]})
