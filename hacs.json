@@ -2,5 +2,5 @@
   "name": "ResRobot",
   "country": "SE",
   "domains": ["sensor"],
-  "homeassistant": "2022.12.8"
+  "homeassistant": "2023.04.1"
 }
