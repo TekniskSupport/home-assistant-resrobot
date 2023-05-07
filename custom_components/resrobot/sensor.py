@@ -17,6 +17,7 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_component import EntityComponent
 from homeassistant.components.sensor import PLATFORM_SCHEMA
 from homeassistant.components.rest import RestData
+from homeassistant.util.ssl import SSLCipherList
 from homeassistant.const import (CONF_NAME)
 from dateutil import parser
 from datetime import datetime
@@ -27,6 +28,7 @@ _ENDPOINT = 'https://api.resrobot.se/v2.1/departureBoard?format=json'
 DEFAULT_NAME            = 'ResRobot'
 DEFAULT_INTERVAL        = 1
 DEFAULT_VERIFY_SSL      = True
+DEFAULT_SSL_CIPHER_LIST = SSLCipherList.PYTHON_DEFAULT
 CONF_DEPARTURES         = 'departures'
 CONF_MAX_JOURNEYS       = 'max_journeys'
 CONF_SENSORS            = 'sensors'
@@ -99,6 +101,7 @@ async def add_sensors(hass, config, async_add_devices, api_key, fetch_interval,
     auth           = None
     encoding       = 'utf-8'
     verify_ssl     = DEFAULT_VERIFY_SSL
+    ssl_cipher_list = DEFAULT_SSL_CIPHER_LIST
     headers        = {}
     params         = {}
     timeout        = 5000
@@ -112,7 +115,7 @@ async def add_sensors(hass, config, async_add_devices, api_key, fetch_interval,
     if time_offset:
         time     = dateparser.parse("in " + str(time_offset) + " minutes")
         resource = resource + '&time='+ time.strftime("%H:%M") + '&date=' + time.strftime('%Y-%m-%d')
-    rest           = RestData(hass, method, resource, encoding, auth, headers, params, payload, verify_ssl, timeout)
+    rest           = RestData(hass, method, resource, encoding, auth, headers, params, payload, verify_ssl, ssl_cipher_list, timeout)
     helpers.append(helperEntity(rest, helper, fetch_interval, time_offset, base_resource, filter))
     async_add_devices(helpers, True)
 
