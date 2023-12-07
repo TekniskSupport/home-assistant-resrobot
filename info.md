@@ -14,7 +14,7 @@ First off, this integration is compatible with version 0.117.0 and above (to dat
 ### To get your api_key:
 - register for an account, and
 - create a project at https://www.trafiklab.se/node/add/project
-- make sure to include the "ResRobot - Stolptidtabeller 2" data source
+- make sure to include the "ResRobot v2.1" data source
 
 ### How to configure
 #### Add the following to resources in your `sensors.yaml`:
