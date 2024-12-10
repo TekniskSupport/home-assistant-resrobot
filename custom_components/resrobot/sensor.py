@@ -30,6 +30,7 @@ DEFAULT_INTERVAL        = 1
 DEFAULT_VERIFY_SSL      = True
 DEFAULT_SSL_CIPHER_LIST = SSLCipherList.PYTHON_DEFAULT
 CONF_DEPARTURES         = 'departures'
+CONF_DEBUG_MODE         = 'debug_mode'
 CONF_MAX_JOURNEYS       = 'max_journeys'
 CONF_SENSORS            = 'sensors'
 CONF_STOP_ID            = 'stop_id'
@@ -47,6 +48,7 @@ CONF_TIME_FORMAT        = 'time_format'
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_KEY, default=0): cv.string,
+    vol.Optional(CONF_DEBUG_MODE, default=False): cv.boolean,
     vol.Optional(CONF_FETCH_INTERVAL): cv.positive_int,
     vol.Required(CONF_DEPARTURES): [{
         vol.Optional(CONF_SENSORS, default=3): cv.positive_int,
@@ -71,6 +73,7 @@ async def async_setup_platform(hass, config, async_add_devices, discovery_info=N
     sensors        = []
     departures     = config.get(CONF_DEPARTURES)
     api_key        = config.get(CONF_KEY)
+    debug_mode     = config.get(CONF_DEBUG_MODE)
     fetch_interval = config.get(CONF_FETCH_INTERVAL) if config.get(CONF_FETCH_INTERVAL) else 10
 
     for departure in departures:
@@ -89,13 +92,14 @@ async def async_setup_platform(hass, config, async_add_devices, discovery_info=N
             departure.get(CONF_TIME_OFFSET),
             departure.get(CONF_FILTER),
             departure.get(CONF_TIME_FORMAT),
-            discovery_info
+            discovery_info,
+            debug_mode
         )
 
 async def add_sensors(hass, config, async_add_devices, api_key, fetch_interval,
                       number_of_sensors, unit_of_measurement, name, update_name,
                       location, max_journeys, time_offset, filter, time_format,
-                      discovery_info=None):
+                      discovery_info=None, debug_mode=False):
     method         = 'GET'
     payload        = ''
     auth           = None
@@ -116,7 +120,7 @@ async def add_sensors(hass, config, async_add_devices, api_key, fetch_interval,
         time     = dateparser.parse("in " + str(time_offset) + " minutes")
         resource = resource + '&time='+ time.strftime("%H:%M") + '&date=' + time.strftime('%Y-%m-%d')
     rest = RestData(hass, method, resource, encoding, auth, headers, params, payload, verify_ssl, ssl_cipher_list, timeout)
-    helpers.append(helperEntity(rest, helper, fetch_interval, time_offset, base_resource, filter))
+    helpers.append(helperEntity(rest, helper, fetch_interval, time_offset, base_resource, filter, debug_mode))
     async_add_devices(helpers, True)
 
     for i in range(0, number_of_sensors):
@@ -130,7 +134,7 @@ async def add_sensors(hass, config, async_add_devices, api_key, fetch_interval,
     async_add_devices(sensors, True)
 
 class helperEntity(Entity):
-    def __init__(self, rest, name, fetch_interval, time_offset, base_resource, filter):
+    def __init__(self, rest, name, fetch_interval, time_offset, base_resource, filter, debug_mode):
         """Initialize a sensor."""
         self._rest        = rest
         self._name        = name
@@ -141,6 +145,7 @@ class helperEntity(Entity):
         self._time_offset = time_offset
         self._base_url    = base_resource
         self._attributes  = {}
+        self.debug_mode   = debug_mode
 
     @property
     def name(self):
@@ -227,6 +232,9 @@ class helperEntity(Entity):
                     time = dateparser.parse("in " + str(self._time_offset) + " minutes")
                     url  = self._base_url + '&time='+ time.strftime("%H:%M") + '&date=' + time.strftime('%Y-%m-%d')
                     self._rest.set_url(url)
+            
+                if self.debug_mode:
+                    _LOGGER.warn("ResRobot Update")
 
                 await self._rest.async_update()
                 self._result = json.loads(self._rest.data)
