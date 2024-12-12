@@ -227,7 +227,7 @@ class helperEntity(Entity):
         """Get the latest data from the API."""
         try:
             fetch_in_seconds = self._interval*60
-            if "json" not in self._attributes or self._state.timestamp()+fetch_in_seconds < datetime.now().timestamp():
+            if ("json" not in self._attributes and "failed" not in self._attributes) or self._state.timestamp()+fetch_in_seconds < datetime.now().timestamp():
                 if self._time_offset:
                     time = dateparser.parse("in " + str(self._time_offset) + " minutes")
                     url  = self._base_url + '&time='+ time.strftime("%H:%M") + '&date=' + time.strftime('%Y-%m-%d')
@@ -241,6 +241,8 @@ class helperEntity(Entity):
 
                 if "Departure" not in self._result:
                     _LOGGER.error("ResRobot found no trips")
+                    self._state = datetime.now()
+                    self._attributes.update({"failed": True})
                     return False
                 trips = self.filterResults(self._result['Departure'])
                 self._state = datetime.now()
