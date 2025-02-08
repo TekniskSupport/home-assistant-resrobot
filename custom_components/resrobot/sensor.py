@@ -23,7 +23,7 @@ from dateutil import parser
 from datetime import datetime
 
 _LOGGER = logging.getLogger(__name__)
-_ENDPOINT = 'https://api.resrobot.se/v2.1/departureBoard?format=json'
+_ENDPOINT = 'https://api.resrobot.se/v2.1/departureBoard'
 
 DEFAULT_NAME            = 'ResRobot'
 DEFAULT_INTERVAL        = 1
@@ -107,20 +107,40 @@ async def add_sensors(hass, config, async_add_devices, api_key, fetch_interval,
     verify_ssl     = DEFAULT_VERIFY_SSL
     ssl_cipher_list = DEFAULT_SSL_CIPHER_LIST
     headers        = {}
-    params         = {}
+    params         = {
+        "format": "json",
+        "accessId": api_key,
+        "id": str(location),
+        "max_journeys": str(max_journeys),
+        "duration": str(480)
+    }
     timeout        = 5000
     time           = None
-    resource       = _ENDPOINT + '&accessId='+ api_key + '&id=' + str(location) + '&maxJourneys='+ str(max_journeys) + '&duration=480'
+    resource       = _ENDPOINT
     sensors        = []
     helpers        = []
     helper         = 'helper_'+name
-    base_resource  = resource
 
     if time_offset:
         time     = dateparser.parse("in " + str(time_offset) + " minutes")
-        resource = resource + '&time='+ time.strftime("%H:%M") + '&date=' + time.strftime('%Y-%m-%d')
-    rest = RestData(hass, method, resource, encoding, auth, headers, params, payload, verify_ssl, ssl_cipher_list, timeout)
-    helpers.append(helperEntity(rest, helper, fetch_interval, time_offset, base_resource, filter, debug_mode))
+        params.update({
+            "time": time.strftime("%H:%M"),
+            "date": time.strftime('%Y-%m-%d')
+        })
+    rest = RestData(
+        hass,
+        method,
+        resource,
+        encoding,
+        auth,
+        headers,
+        params,
+        payload,
+        verify_ssl,
+        ssl_cipher_list,
+        timeout
+    )
+    helpers.append(helperEntity(rest, helper, fetch_interval, time_offset, filter, debug_mode))
     async_add_devices(helpers, True)
 
     for i in range(0, number_of_sensors):
@@ -134,7 +154,7 @@ async def add_sensors(hass, config, async_add_devices, api_key, fetch_interval,
     async_add_devices(sensors, True)
 
 class helperEntity(Entity):
-    def __init__(self, rest, name, fetch_interval, time_offset, base_resource, filter, debug_mode):
+    def __init__(self, rest, name, fetch_interval, time_offset, filter, debug_mode):
         """Initialize a sensor."""
         self._rest        = rest
         self._name        = name
@@ -143,7 +163,6 @@ class helperEntity(Entity):
         self._state       = datetime.now()
         self._interval    = int(fetch_interval)
         self._time_offset = time_offset
-        self._base_url    = base_resource
         self._attributes  = {}
         self.debug_mode   = debug_mode
 
@@ -230,13 +249,15 @@ class helperEntity(Entity):
             if ("json" not in self._attributes and "failed" not in self._attributes) or self._state.timestamp()+fetch_in_seconds < datetime.now().timestamp():
                 if self._time_offset:
                     time = dateparser.parse("in " + str(self._time_offset) + " minutes")
-                    url  = self._base_url + '&time='+ time.strftime("%H:%M") + '&date=' + time.strftime('%Y-%m-%d')
-                    self._rest.set_url(url)
-            
-                if self.debug_mode:
-                    _LOGGER.warn("ResRobot Update")
+                    _rest.params.update({
+                        "time": time.strftime("%H:%M"),
+                        "date": time.strftime('%Y-%m-%d')
+                    })
 
                 await self._rest.async_update()
+                if self.debug_mode:
+                    _LOGGER.warn("ResRobot Update")
+                    _LOGGER.warn(self._rest.data)
                 self._result = json.loads(self._rest.data)
 
                 if "Departure" not in self._result:
