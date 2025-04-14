@@ -17,9 +17,14 @@ First off, this integration is compatible with version 0.117.0 and above (to dat
 - make sure to include the "ResRobot v2.1" data source
 
 ### How to configure
+
+The `sensors.yaml` file should be next to your `configuration.yaml` file. If it does not exist, create it. Inside the `configuration.yaml` file put the line:
+
+```yaml
+sensor: !include sensors.yaml
+```
+Make sure the line is NOT indented.
 #### Add the following to resources in your `sensors.yaml`:
-
-
 ## Replace stop_id with number from [stops.txt](https://raw.githubusercontent.com/TekniskSupport/home-assistant-resrobot/master/stops.txt)
 
 
@@ -27,7 +32,7 @@ A simple setup that creates a few sensors and displays next departures:
 
 ```yaml
 - platform: resrobot
-  key: YOUR-KEY
+  key: YOUR-TRAFILAB-KEY
   departures:
   - stop_id: STOP_ID
     name: Next bus departures
